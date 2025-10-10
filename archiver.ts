@@ -77,10 +77,12 @@ export class Archiver {
 	}
 
 	private getArchiveFullPath(config: ArchiveConfig): string {
-		if (config.rootPath) {
-			return normalizePath(`${config.rootPath}/${config.archivePath}`);
+		// If archive path is absolute or already includes the root path, use it as-is
+		if (!config.rootPath || config.archivePath.startsWith(config.rootPath)) {
+			return normalizePath(config.archivePath);
 		}
-		return normalizePath(config.archivePath);
+		// Otherwise, treat archive path as relative to root path
+		return normalizePath(`${config.rootPath}/${config.archivePath}`);
 	}
 
 	private generateDateBasedPath(filePath: string, archiveBasePath: string): string {

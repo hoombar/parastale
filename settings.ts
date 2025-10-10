@@ -23,7 +23,7 @@ export const DEFAULT_SETTINGS: PARAArchiveSettings = {
 			name: 'Default',
 			rootPath: '',
 			archivePath: 'Archive',
-			archiveMode: 'date-based'
+			archiveMode: 'path-mirror'
 		}
 	],
 	showConfirmation: true,

@@ -2,7 +2,7 @@ import { App, Plugin, TFile, TFolder, Notice, Menu } from 'obsidian';
 import { PARAArchiveSettings, DEFAULT_SETTINGS } from './settings';
 import { PARAArchiveSettingTab } from './settings-tab';
 import { Archiver } from './archiver';
-import { LinkUpdater } from './link-updater';
+import { LinkUpdater, LinkUpdate } from './link-updater';
 import { ArchiveConfirmationModal } from './confirmation-modal';
 
 export default class PARAArchivePlugin extends Plugin {
@@ -96,7 +96,7 @@ export default class PARAArchivePlugin extends Plugin {
 			const destinationPath = this.archiver.generateArchivePath(file.path, config);
 
 			// Prepare link updates if needed
-			let linkUpdates = [];
+			let linkUpdates: LinkUpdate[] = [];
 			if (this.settings.linkUpdateMode !== 'never' && file instanceof TFile) {
 				linkUpdates = await this.linkUpdater.prepareLinkUpdates(file.path, destinationPath);
 			}
@@ -130,7 +130,7 @@ export default class PARAArchivePlugin extends Plugin {
 		file: TFile | TFolder,
 		config: any,
 		destinationPath: string,
-		linkUpdates: any[]
+		linkUpdates: LinkUpdate[]
 	) {
 		try {
 			// Archive the file

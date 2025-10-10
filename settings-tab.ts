@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import PARAArchivePlugin from './main';
 import { ArchiveConfig, ArchiveMode, LinkUpdateMode } from './settings';
+import { FolderSuggest } from './folder-suggest';
 
 export class PARAArchiveSettingTab extends PluginSettingTab {
 	plugin: PARAArchivePlugin;
@@ -87,28 +88,41 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					config.name = value;
 					await this.plugin.saveSettings();
-					this.display();
+					// Update the header without refreshing the entire display
+					configDiv.querySelector('h4').textContent = `Configuration: ${config.name}`;
 				}));
 
 		new Setting(configDiv)
 			.setName('Root path')
 			.setDesc('The root folder path this configuration applies to (e.g., "Personal", "Work"). Leave empty for vault root.')
-			.addText(text => text
-				.setValue(config.rootPath)
-				.onChange(async (value) => {
+			.addSearch(search => {
+				search.setPlaceholder('Select or type folder path...')
+					.setValue(config.rootPath)
+					.onChange(async (value) => {
+						config.rootPath = value;
+						await this.plugin.saveSettings();
+					});
+				new FolderSuggest(this.app, search.inputEl, async (value) => {
 					config.rootPath = value;
 					await this.plugin.saveSettings();
-				}));
+				});
+			});
 
 		new Setting(configDiv)
 			.setName('Archive path')
 			.setDesc('The folder where archived files will be moved (relative to root path)')
-			.addText(text => text
-				.setValue(config.archivePath)
-				.onChange(async (value) => {
+			.addSearch(search => {
+				search.setPlaceholder('Select or type archive folder path...')
+					.setValue(config.archivePath)
+					.onChange(async (value) => {
+						config.archivePath = value;
+						await this.plugin.saveSettings();
+					});
+				new FolderSuggest(this.app, search.inputEl, async (value) => {
 					config.archivePath = value;
 					await this.plugin.saveSettings();
-				}));
+				});
+			});
 
 		new Setting(configDiv)
 			.setName('Archive mode')

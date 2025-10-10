@@ -45,7 +45,7 @@ export class LinkUpdater {
 				for (const embed of cache.embeds) {
 					const linkedFile = this.metadataCache.getFirstLinkpathDest(embed.link, file.path);
 					if (linkedFile && linkedFile.path === targetFile.path) {
-						if (!linkedFiles.includes(file)) {
+						if (linkedFiles.indexOf(file) === -1) {
 							linkedFiles.push(file);
 						}
 						break;
