@@ -58,6 +58,32 @@ export class LinkUpdater {
 	}
 
 	/**
+	 * Prepares link updates for all files that reference files within a moved folder
+	 */
+	async prepareFolderLinkUpdates(oldFolderPath: string, newFolderPath: string): Promise<LinkUpdate[]> {
+		const updates: LinkUpdate[] = [];
+		const allFiles = this.vault.getMarkdownFiles();
+
+		// Get all files that were in the folder
+		const filesInFolder = this.vault.getMarkdownFiles().filter(file =>
+			file.path.startsWith(oldFolderPath + '/') || file.path === oldFolderPath
+		);
+
+		// For each file that was in the folder, find and update links to it
+		for (const fileInFolder of filesInFolder) {
+			// Calculate what the new path would be for this file
+			const relativePath = fileInFolder.path.substring(oldFolderPath.length);
+			const newFilePath = newFolderPath + relativePath;
+
+			// Find all files that link to this file and prepare updates
+			const fileUpdates = await this.prepareLinkUpdates(fileInFolder.path, newFilePath);
+			updates.push(...fileUpdates);
+		}
+
+		return updates;
+	}
+
+	/**
 	 * Prepares link updates for all files that reference the moved file
 	 */
 	async prepareLinkUpdates(oldPath: string, newPath: string): Promise<LinkUpdate[]> {
@@ -130,10 +156,25 @@ export class LinkUpdater {
 
 			// Check if this link points to our moved file
 			if (resolvedFile && resolvedFile.path === oldPath) {
-				// Use relative path without extension for wikilinks
-				const newLinkPath = newRelativePath.replace(/\.[^/.]+$/, '');
 				const anchorPart = anchor || '';
 				const aliasPart = alias ? `|${alias}` : '';
+
+				// Get the new filename without extension
+				const newFileName = newPath.split('/').pop()?.replace(/\.[^/.]+$/, '') || '';
+
+				// Check if we can use just the filename (if it's unique in the vault)
+				let newLinkPath: string;
+
+				// If the original link was just a filename, try to keep it simple
+				const originalWasSimple = linkPath.trim() === oldFileName;
+
+				if (originalWasSimple && this.isFilenameUnique(newFileName)) {
+					// Use simple filename if it's unique
+					newLinkPath = newFileName;
+				} else {
+					// Use relative path without extension for wikilinks
+					newLinkPath = newRelativePath.replace(/\.[^/.]+$/, '');
+				}
 
 				return `[[${newLinkPath}${anchorPart}${aliasPart}]]`;
 			}
@@ -193,11 +234,39 @@ export class LinkUpdater {
 	}
 
 	private countUpdatedLinks(oldContent: string, newContent: string): number {
-		// Simple approach: count the number of [[ or ]( that changed
-		const oldLinks = (oldContent.match(/\[\[|\]\(/g) || []).length;
-		const newLinks = (newContent.match(/\[\[|\]\(/g) || []).length;
+		if (oldContent === newContent) {
+			return 0;
+		}
 
-		// This is a rough estimate - the actual implementation could be more precise
-		return Math.abs(newLinks - oldLinks);
+		// Count actual link changes by comparing line by line
+		const oldLines = oldContent.split('\n');
+		const newLines = newContent.split('\n');
+		let linkChanges = 0;
+
+		for (let i = 0; i < Math.max(oldLines.length, newLines.length); i++) {
+			const oldLine = oldLines[i] || '';
+			const newLine = newLines[i] || '';
+
+			if (oldLine !== newLine) {
+				// Count links in this changed line
+				const linksInLine = (newLine.match(/\[\[.*?\]\]|\[.*?\]\(.*?\)/g) || []).length;
+				linkChanges += linksInLine;
+			}
+		}
+
+		return linkChanges;
+	}
+
+	/**
+	 * Check if a filename is unique in the vault (no naming conflicts)
+	 */
+	private isFilenameUnique(filename: string): boolean {
+		const allFiles = this.vault.getMarkdownFiles();
+		const matchingFiles = allFiles.filter(file => {
+			const fileBasename = file.basename;
+			return fileBasename === filename;
+		});
+
+		return matchingFiles.length <= 1;
 	}
 }

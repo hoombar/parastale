@@ -97,8 +97,12 @@ export default class PARAArchivePlugin extends Plugin {
 
 			// Prepare link updates if needed
 			let linkUpdates: LinkUpdate[] = [];
-			if (this.settings.linkUpdateMode !== 'never' && file instanceof TFile) {
-				linkUpdates = await this.linkUpdater.prepareLinkUpdates(file.path, destinationPath);
+			if (this.settings.linkUpdateMode !== 'never') {
+				if (file instanceof TFile) {
+					linkUpdates = await this.linkUpdater.prepareLinkUpdates(file.path, destinationPath);
+				} else if (file instanceof TFolder) {
+					linkUpdates = await this.linkUpdater.prepareFolderLinkUpdates(file.path, destinationPath);
+				}
 			}
 
 			// Show confirmation if enabled

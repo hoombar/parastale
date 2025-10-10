@@ -291,6 +291,23 @@ var LinkUpdater = class {
     return linkedFiles;
   }
   /**
+   * Prepares link updates for all files that reference files within a moved folder
+   */
+  async prepareFolderLinkUpdates(oldFolderPath, newFolderPath) {
+    const updates = [];
+    const allFiles = this.vault.getMarkdownFiles();
+    const filesInFolder = this.vault.getMarkdownFiles().filter(
+      (file) => file.path.startsWith(oldFolderPath + "/") || file.path === oldFolderPath
+    );
+    for (const fileInFolder of filesInFolder) {
+      const relativePath = fileInFolder.path.substring(oldFolderPath.length);
+      const newFilePath = newFolderPath + relativePath;
+      const fileUpdates = await this.prepareLinkUpdates(fileInFolder.path, newFilePath);
+      updates.push(...fileUpdates);
+    }
+    return updates;
+  }
+  /**
    * Prepares link updates for all files that reference the moved file
    */
   async prepareLinkUpdates(oldPath, newPath) {
@@ -343,11 +360,19 @@ var LinkUpdater = class {
   updateWikilinks(content, oldPath, newPath, oldFileName, newRelativePath, currentFilePath) {
     const wikilinkRegex = /\[\[([^\]|#^]+)([#^][^\]|]*)?\|?([^\]]*)?\]\]/g;
     return content.replace(wikilinkRegex, (match, linkPath, anchor, alias) => {
+      var _a;
       const resolvedFile = this.metadataCache.getFirstLinkpathDest(linkPath.trim(), currentFilePath);
       if (resolvedFile && resolvedFile.path === oldPath) {
-        const newLinkPath = newRelativePath.replace(/\.[^/.]+$/, "");
         const anchorPart = anchor || "";
         const aliasPart = alias ? `|${alias}` : "";
+        const newFileName = ((_a = newPath.split("/").pop()) == null ? void 0 : _a.replace(/\.[^/.]+$/, "")) || "";
+        let newLinkPath;
+        const originalWasSimple = linkPath.trim() === oldFileName;
+        if (originalWasSimple && this.isFilenameUnique(newFileName)) {
+          newLinkPath = newFileName;
+        } else {
+          newLinkPath = newRelativePath.replace(/\.[^/.]+$/, "");
+        }
         return `[[${newLinkPath}${anchorPart}${aliasPart}]]`;
       }
       return match;
@@ -385,9 +410,32 @@ var LinkUpdater = class {
     return relativeParts.join("/");
   }
   countUpdatedLinks(oldContent, newContent) {
-    const oldLinks = (oldContent.match(/\[\[|\]\(/g) || []).length;
-    const newLinks = (newContent.match(/\[\[|\]\(/g) || []).length;
-    return Math.abs(newLinks - oldLinks);
+    if (oldContent === newContent) {
+      return 0;
+    }
+    const oldLines = oldContent.split("\n");
+    const newLines = newContent.split("\n");
+    let linkChanges = 0;
+    for (let i = 0; i < Math.max(oldLines.length, newLines.length); i++) {
+      const oldLine = oldLines[i] || "";
+      const newLine = newLines[i] || "";
+      if (oldLine !== newLine) {
+        const linksInLine = (newLine.match(/\[\[.*?\]\]|\[.*?\]\(.*?\)/g) || []).length;
+        linkChanges += linksInLine;
+      }
+    }
+    return linkChanges;
+  }
+  /**
+   * Check if a filename is unique in the vault (no naming conflicts)
+   */
+  isFilenameUnique(filename) {
+    const allFiles = this.vault.getMarkdownFiles();
+    const matchingFiles = allFiles.filter((file) => {
+      const fileBasename = file.basename;
+      return fileBasename === filename;
+    });
+    return matchingFiles.length <= 1;
   }
 };
 
@@ -554,8 +602,12 @@ var PARAArchivePlugin = class extends import_obsidian5.Plugin {
       }
       const destinationPath = this.archiver.generateArchivePath(file.path, config);
       let linkUpdates = [];
-      if (this.settings.linkUpdateMode !== "never" && file instanceof import_obsidian5.TFile) {
-        linkUpdates = await this.linkUpdater.prepareLinkUpdates(file.path, destinationPath);
+      if (this.settings.linkUpdateMode !== "never") {
+        if (file instanceof import_obsidian5.TFile) {
+          linkUpdates = await this.linkUpdater.prepareLinkUpdates(file.path, destinationPath);
+        } else if (file instanceof import_obsidian5.TFolder) {
+          linkUpdates = await this.linkUpdater.prepareFolderLinkUpdates(file.path, destinationPath);
+        }
       }
       if (this.settings.showConfirmation) {
         new ArchiveConfirmationModal(
