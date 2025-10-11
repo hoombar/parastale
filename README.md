@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="parastale-logo.png" alt="PARASTALE Logo" width="400">
+</div>
+
 # PARA Archive Plugin for Obsidian
 
 An Obsidian plugin that helps you archive files and folders using the PARA method with configurable archive strategies and smart link updating.
