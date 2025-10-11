@@ -364,14 +364,19 @@ var LinkUpdater = class {
       const resolvedFile = this.metadataCache.getFirstLinkpathDest(linkPath.trim(), currentFilePath);
       if (resolvedFile && resolvedFile.path === oldPath) {
         const anchorPart = anchor || "";
-        const aliasPart = alias ? `|${alias}` : "";
         const newFileName = ((_a = newPath.split("/").pop()) == null ? void 0 : _a.replace(/\.[^/.]+$/, "")) || "";
         let newLinkPath;
         const originalWasSimple = linkPath.trim() === oldFileName;
-        if (originalWasSimple && this.isFilenameUnique(newFileName)) {
+        if (originalWasSimple && this.isFilenameUnique(newFileName) && oldPath === newPath) {
           newLinkPath = newFileName;
         } else {
           newLinkPath = newRelativePath.replace(/\.[^/.]+$/, "");
+        }
+        let aliasPart = "";
+        if (alias) {
+          aliasPart = `|${alias}`;
+        } else if (newLinkPath !== newFileName && newLinkPath.includes("/")) {
+          aliasPart = `|${newFileName}`;
         }
         return `[[${newLinkPath}${anchorPart}${aliasPart}]]`;
       }

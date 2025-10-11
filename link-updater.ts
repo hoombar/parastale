@@ -157,7 +157,6 @@ export class LinkUpdater {
 			// Check if this link points to our moved file
 			if (resolvedFile && resolvedFile.path === oldPath) {
 				const anchorPart = anchor || '';
-				const aliasPart = alias ? `|${alias}` : '';
 
 				// Get the new filename without extension
 				const newFileName = newPath.split('/').pop()?.replace(/\.[^/.]+$/, '') || '';
@@ -168,12 +167,24 @@ export class LinkUpdater {
 				// If the original link was just a filename, try to keep it simple
 				const originalWasSimple = linkPath.trim() === oldFileName;
 
-				if (originalWasSimple && this.isFilenameUnique(newFileName)) {
-					// Use simple filename if it's unique
+				// Only keep simple if the file path hasn't actually moved
+				if (originalWasSimple && this.isFilenameUnique(newFileName) && oldPath === newPath) {
+					// Use simple filename only if the file hasn't moved at all
 					newLinkPath = newFileName;
 				} else {
 					// Use relative path without extension for wikilinks
 					newLinkPath = newRelativePath.replace(/\.[^/.]+$/, '');
+				}
+
+				// Handle alias preservation
+				let aliasPart = '';
+				if (alias) {
+					// Explicit alias exists, preserve it
+					aliasPart = `|${alias}`;
+				} else if (newLinkPath !== newFileName && newLinkPath.includes('/')) {
+					// We're using a full path but the filename is what should be displayed
+					// Add an alias to preserve the clean display text
+					aliasPart = `|${newFileName}`;
 				}
 
 				return `[[${newLinkPath}${anchorPart}${aliasPart}]]`;
