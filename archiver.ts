@@ -56,13 +56,78 @@ export class Archiver {
 	async archiveFile(file: TFile | TFolder, config: ArchiveConfig): Promise<string> {
 		const destinationPath = this.generateArchivePath(file.path, config);
 
-		// Ensure the destination directory exists
-		await this.ensureDirectoryExists(destinationPath);
+		// Check if destination already exists
+		const existingItem = this.vault.getAbstractFileByPath(destinationPath);
 
-		// Move the file
-		await this.vault.rename(file, destinationPath);
+		if (file instanceof TFolder && existingItem instanceof TFolder) {
+			// Folder conflict: merge contents instead of renaming
+			await this.mergeFolderContents(file, existingItem);
+			// Remove the original folder after moving its contents
+			await this.vault.delete(file);
+		} else {
+			// Ensure the destination directory exists
+			await this.ensureDirectoryExists(destinationPath);
+			// Move the file/folder normally
+			await this.vault.rename(file, destinationPath);
+		}
 
 		return destinationPath;
+	}
+
+	/**
+	 * Merges contents of source folder into destination folder
+	 */
+	private async mergeFolderContents(sourceFolder: TFolder, destinationFolder: TFolder): Promise<void> {
+		// Get all children of the source folder
+		for (const child of sourceFolder.children) {
+			const childDestinationPath = normalizePath(`${destinationFolder.path}/${child.name}`);
+
+			try {
+				// Check if destination already has an item with the same name
+				const existingChild = this.vault.getAbstractFileByPath(childDestinationPath);
+
+				if (child instanceof TFolder && existingChild instanceof TFolder) {
+					// Recursive merge for nested folders
+					await this.mergeFolderContents(child, existingChild);
+					await this.vault.delete(child);
+				} else if (existingChild) {
+					// Handle file conflicts - could add user choice here in the future
+					// For now, we'll create a unique name
+					const uniquePath = await this.generateUniquePath(childDestinationPath);
+					await this.vault.rename(child, uniquePath);
+				} else {
+					// No conflict, move normally
+					await this.vault.rename(child, childDestinationPath);
+				}
+			} catch (error) {
+				console.error(`Failed to move ${child.path} to ${childDestinationPath}:`, error);
+				throw error;
+			}
+		}
+	}
+
+	/**
+	 * Generates a unique path by adding numbers if needed
+	 */
+	private async generateUniquePath(basePath: string): Promise<string> {
+		let counter = 1;
+		let newPath = basePath;
+
+		while (this.vault.getAbstractFileByPath(newPath)) {
+			const pathParts = basePath.split('.');
+			if (pathParts.length > 1) {
+				// Has extension
+				const extension = pathParts.pop();
+				const nameWithoutExt = pathParts.join('.');
+				newPath = `${nameWithoutExt} ${counter}.${extension}`;
+			} else {
+				// No extension (folder or file without extension)
+				newPath = `${basePath} ${counter}`;
+			}
+			counter++;
+		}
+
+		return newPath;
 	}
 
 	private isFileInRoot(filePath: string, rootPath: string): boolean {

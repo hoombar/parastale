@@ -164,12 +164,9 @@ export class LinkUpdater {
 				// Check if we can use just the filename (if it's unique in the vault)
 				let newLinkPath: string;
 
-				// If the original link was just a filename, try to keep it simple
-				const originalWasSimple = linkPath.trim() === oldFileName;
-
-				// Only keep simple if the file path hasn't actually moved
-				if (originalWasSimple && this.isFilenameUnique(newFileName) && oldPath === newPath) {
-					// Use simple filename only if the file hasn't moved at all
+				// Check if we can use the simple filename (if it's unique)
+				if (this.isFilenameUnique(newFileName)) {
+					// Use simple filename if it's unique in the vault
 					newLinkPath = newFileName;
 				} else {
 					// Use relative path without extension for wikilinks
@@ -186,6 +183,7 @@ export class LinkUpdater {
 					// Add an alias to preserve the clean display text
 					aliasPart = `|${newFileName}`;
 				}
+				// If newLinkPath equals newFileName, no alias needed
 
 				return `[[${newLinkPath}${anchorPart}${aliasPart}]]`;
 			}

@@ -198,9 +198,57 @@ var Archiver = class {
    */
   async archiveFile(file, config) {
     const destinationPath = this.generateArchivePath(file.path, config);
-    await this.ensureDirectoryExists(destinationPath);
-    await this.vault.rename(file, destinationPath);
+    const existingItem = this.vault.getAbstractFileByPath(destinationPath);
+    if (file instanceof import_obsidian3.TFolder && existingItem instanceof import_obsidian3.TFolder) {
+      await this.mergeFolderContents(file, existingItem);
+      await this.vault.delete(file);
+    } else {
+      await this.ensureDirectoryExists(destinationPath);
+      await this.vault.rename(file, destinationPath);
+    }
     return destinationPath;
+  }
+  /**
+   * Merges contents of source folder into destination folder
+   */
+  async mergeFolderContents(sourceFolder, destinationFolder) {
+    for (const child of sourceFolder.children) {
+      const childDestinationPath = (0, import_obsidian3.normalizePath)(`${destinationFolder.path}/${child.name}`);
+      try {
+        const existingChild = this.vault.getAbstractFileByPath(childDestinationPath);
+        if (child instanceof import_obsidian3.TFolder && existingChild instanceof import_obsidian3.TFolder) {
+          await this.mergeFolderContents(child, existingChild);
+          await this.vault.delete(child);
+        } else if (existingChild) {
+          const uniquePath = await this.generateUniquePath(childDestinationPath);
+          await this.vault.rename(child, uniquePath);
+        } else {
+          await this.vault.rename(child, childDestinationPath);
+        }
+      } catch (error) {
+        console.error(`Failed to move ${child.path} to ${childDestinationPath}:`, error);
+        throw error;
+      }
+    }
+  }
+  /**
+   * Generates a unique path by adding numbers if needed
+   */
+  async generateUniquePath(basePath) {
+    let counter = 1;
+    let newPath = basePath;
+    while (this.vault.getAbstractFileByPath(newPath)) {
+      const pathParts = basePath.split(".");
+      if (pathParts.length > 1) {
+        const extension = pathParts.pop();
+        const nameWithoutExt = pathParts.join(".");
+        newPath = `${nameWithoutExt} ${counter}.${extension}`;
+      } else {
+        newPath = `${basePath} ${counter}`;
+      }
+      counter++;
+    }
+    return newPath;
   }
   isFileInRoot(filePath, rootPath) {
     if (!rootPath) {
@@ -366,8 +414,7 @@ var LinkUpdater = class {
         const anchorPart = anchor || "";
         const newFileName = ((_a = newPath.split("/").pop()) == null ? void 0 : _a.replace(/\.[^/.]+$/, "")) || "";
         let newLinkPath;
-        const originalWasSimple = linkPath.trim() === oldFileName;
-        if (originalWasSimple && this.isFilenameUnique(newFileName) && oldPath === newPath) {
+        if (this.isFilenameUnique(newFileName)) {
           newLinkPath = newFileName;
         } else {
           newLinkPath = newRelativePath.replace(/\.[^/.]+$/, "");
