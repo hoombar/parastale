@@ -42,6 +42,28 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		new Setting(containerEl)
+			.setName('Show undo notification')
+			.setDesc('Show a temporary notification with an undo button after archiving files')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showUndoNotice)
+				.onChange(async (value) => {
+					this.plugin.settings.showUndoNotice = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Undo timeout (seconds)')
+			.setDesc('How long the undo notification stays visible')
+			.addSlider(slider => slider
+				.setLimits(1, 15, 1)
+				.setValue(this.plugin.settings.undoTimeoutMs / 1000)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.undoTimeoutMs = value * 1000;
+					await this.plugin.saveSettings();
+				}));
+
 		// Archive configurations
 		containerEl.createEl('h3', { text: 'Archive Configurations' });
 		containerEl.createEl('p', { text: 'Configure different archive setups for different parts of your vault (e.g., Personal, Work)' });

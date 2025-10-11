@@ -1,14 +1,16 @@
 import { App, Plugin, TFile, TFolder, Notice, Menu } from 'obsidian';
-import { PARAArchiveSettings, DEFAULT_SETTINGS } from './settings';
+import { PARAArchiveSettings, DEFAULT_SETTINGS, ArchiveOperation } from './settings';
 import { PARAArchiveSettingTab } from './settings-tab';
 import { Archiver } from './archiver';
 import { LinkUpdater, LinkUpdate } from './link-updater';
 import { ArchiveConfirmationModal } from './confirmation-modal';
+import { UndoNotice } from './undo-notice';
 
 export default class PARAArchivePlugin extends Plugin {
 	settings: PARAArchiveSettings;
 	private archiver: Archiver;
 	private linkUpdater: LinkUpdater;
+	private pendingOperations: Map<string, ArchiveOperation> = new Map();
 
 	async onload() {
 		await this.loadSettings();
@@ -137,28 +139,105 @@ export default class PARAArchivePlugin extends Plugin {
 		linkUpdates: LinkUpdate[]
 	) {
 		try {
+			const originalPath = file.path;
+
 			// Archive the file
 			await this.archiver.archiveFile(file, config);
 
 			// Update links if configured and there are updates
+			let appliedLinkUpdates: LinkUpdate[] = [];
+			let successMessage = 'File archived successfully';
+
 			if (this.settings.linkUpdateMode === 'always' && linkUpdates.length > 0) {
 				const result = await this.linkUpdater.applyLinkUpdates(linkUpdates);
+				appliedLinkUpdates = linkUpdates;
 
 				if (result.failed.length > 0) {
-					new Notice(`File archived. Updated ${result.success} files, failed to update ${result.failed.length} files.`);
+					successMessage = `File archived. Updated ${result.success} files, failed to update ${result.failed.length} files.`;
 				} else {
-					new Notice(`File archived successfully. Updated ${result.success} files with links.`);
+					successMessage = `File archived successfully. Updated ${result.success} files with links.`;
 				}
 			} else if (this.settings.linkUpdateMode === 'ask' && linkUpdates.length > 0) {
-				// Show a separate modal or notice asking about link updates
-				new Notice(`File archived. ${linkUpdates.length} files contain links to this file. Use the command palette to update links if needed.`);
+				successMessage = `File archived. ${linkUpdates.length} files contain links to this file.`;
+			}
+
+			// Show undo notice if enabled
+			if (this.settings.showUndoNotice) {
+				this.showUndoNotice(originalPath, destinationPath, appliedLinkUpdates, config, successMessage);
 			} else {
-				new Notice('File archived successfully');
+				new Notice(successMessage);
 			}
 
 		} catch (error) {
 			console.error('Archive operation failed:', error);
 			new Notice(`Archive failed: ${error.message}`);
+		}
+	}
+
+	private showUndoNotice(
+		originalPath: string,
+		destinationPath: string,
+		linkUpdates: LinkUpdate[],
+		config: any,
+		message: string
+	) {
+		// Create operation record
+		const operation: ArchiveOperation = {
+			originalPath,
+			destinationPath,
+			linkUpdates,
+			timestamp: Date.now(),
+			config
+		};
+
+		// Generate unique ID for this operation
+		const operationId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		this.pendingOperations.set(operationId, operation);
+
+		// Create undo notice
+		const undoNotice = new UndoNotice(
+			message,
+			async () => {
+				await this.performUndo(operationId);
+			},
+			this.settings.undoTimeoutMs
+		);
+
+		// Clean up operation after timeout
+		setTimeout(() => {
+			this.pendingOperations.delete(operationId);
+		}, this.settings.undoTimeoutMs + 1000);
+	}
+
+	private async performUndo(operationId: string) {
+		const operation = this.pendingOperations.get(operationId);
+		if (!operation) {
+			new Notice('Undo operation has expired');
+			return;
+		}
+
+		try {
+			// Undo the archive
+			await this.archiver.undoArchive(operation);
+
+			// Revert link updates if they were applied
+			if (operation.linkUpdates.length > 0) {
+				// Create reverse link updates by swapping old and new content
+				const reverseLinkUpdates = operation.linkUpdates.map(update => ({
+					...update,
+					oldContent: update.newContent,
+					newContent: update.oldContent
+				}));
+				await this.linkUpdater.applyLinkUpdates(reverseLinkUpdates);
+			}
+
+			// Clean up
+			this.pendingOperations.delete(operationId);
+
+			new Notice('Archive operation undone successfully');
+		} catch (error) {
+			console.error('Undo failed:', error);
+			new Notice(`Undo failed: ${error.message}`);
 		}
 	}
 }

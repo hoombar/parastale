@@ -10,10 +10,20 @@ export interface ArchiveConfig {
 	archiveMode: ArchiveMode;
 }
 
+export interface ArchiveOperation {
+	originalPath: string;
+	destinationPath: string;
+	linkUpdates: import('./link-updater').LinkUpdate[];
+	timestamp: number;
+	config: ArchiveConfig;
+}
+
 export interface PARAArchiveSettings {
 	archiveConfigs: ArchiveConfig[];
 	showConfirmation: boolean;
 	linkUpdateMode: LinkUpdateMode;
+	showUndoNotice: boolean;
+	undoTimeoutMs: number;
 }
 
 export const DEFAULT_SETTINGS: PARAArchiveSettings = {
@@ -27,5 +37,7 @@ export const DEFAULT_SETTINGS: PARAArchiveSettings = {
 		}
 	],
 	showConfirmation: true,
-	linkUpdateMode: 'always'
+	linkUpdateMode: 'always',
+	showUndoNotice: true,
+	undoTimeoutMs: 5000
 };

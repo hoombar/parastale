@@ -1,5 +1,5 @@
 import { TFile, TFolder, Vault, normalizePath } from 'obsidian';
-import { ArchiveConfig, ArchiveMode } from './settings';
+import { ArchiveConfig, ArchiveMode, ArchiveOperation } from './settings';
 
 export class Archiver {
 	private vault: Vault;
@@ -72,6 +72,32 @@ export class Archiver {
 		}
 
 		return destinationPath;
+	}
+
+	/**
+	 * Undoes an archive operation by moving the file/folder back to its original location
+	 */
+	async undoArchive(operation: ArchiveOperation): Promise<void> {
+		// Check if the archived file still exists
+		const archivedFile = this.vault.getAbstractFileByPath(operation.destinationPath);
+		if (!archivedFile) {
+			throw new Error('Archived file no longer exists and cannot be restored');
+		}
+
+		// Check if original location is now occupied
+		const existingFile = this.vault.getAbstractFileByPath(operation.originalPath);
+		if (existingFile) {
+			// Generate a unique name for the restore
+			const uniquePath = await this.generateUniquePath(operation.originalPath);
+			await this.vault.rename(archivedFile, uniquePath);
+			throw new Error(`Original location is occupied. File restored to: ${uniquePath}`);
+		}
+
+		// Ensure the original directory exists
+		await this.ensureDirectoryExists(operation.originalPath);
+
+		// Move the file back to its original location
+		await this.vault.rename(archivedFile, operation.originalPath);
 	}
 
 	/**
