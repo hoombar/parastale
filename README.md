@@ -14,6 +14,7 @@ An Obsidian plugin that helps you archive files and folders using the PARA metho
   - **Date-based**: Creates `YYYY-MM` folders in your archive
   - **Path mirror**: Recreates the original folder structure in the archive
 - **Smart link updating**: Automatically updates internal links when files are archived
+- **Undo functionality**: Temporary notification with undo button after archiving (configurable timeout)
 - **Confirmation dialog**: Optional preview of what will happen before archiving
 - **Archive detection**: Won't show archive option for files already in archive folders
 
@@ -63,6 +64,8 @@ Create multiple archive configurations for different parts of your vault:
   - Always update links automatically
   - Ask before updating links
   - Never update links
+- **Show undo notification**: Enable/disable temporary undo notifications after archiving
+- **Undo timeout**: Configure how long undo notifications stay visible (1-15 seconds)
 
 ## Usage
 
@@ -75,6 +78,22 @@ Create multiple archive configurations for different parts of your vault:
 ### Command Palette
 
 Use the command "Archive current file" to archive the currently active file.
+
+### Undo Functionality
+
+After successfully archiving a file or folder, you'll see a temporary notification with an "Undo" button:
+
+```
+"File archived successfully. Updated 3 files with links." [Undo]
+```
+
+- **Click "Undo"** to immediately reverse the archive operation
+- The notification **auto-disappears** after the configured timeout (default: 5 seconds)
+- **What gets undone**:
+  - File/folder is moved back to its original location
+  - All link updates are automatically reverted
+  - If the original location is occupied, the file is restored with a unique name
+- **Progress feedback**: Shows a spinner while the undo operation is in progress
 
 ## Archive Modes
 
@@ -122,9 +141,10 @@ This plugin is built with TypeScript and uses the Obsidian API.
 - `main.ts`: Main plugin class and event handlers
 - `settings.ts`: Settings interface and types
 - `settings-tab.ts`: Settings UI
-- `archiver.ts`: Core archiving logic
+- `archiver.ts`: Core archiving logic with undo functionality
 - `link-updater.ts`: Link detection and updating
 - `confirmation-modal.ts`: Confirmation dialog
+- `undo-notice.ts`: Custom undo notification component
 - `styles.css`: Plugin styling
 
 ## Contributing
