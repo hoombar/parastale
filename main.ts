@@ -16,7 +16,7 @@ export default class PARAArchivePlugin extends Plugin {
 		await this.loadSettings();
 
 		// Initialize components
-		this.archiver = new Archiver(this.app.vault);
+		this.archiver = new Archiver(this.app);
 		this.linkUpdater = new LinkUpdater(this.app);
 
 		// Add settings tab

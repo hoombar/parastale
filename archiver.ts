@@ -1,11 +1,13 @@
-import { TFile, TFolder, Vault, normalizePath } from 'obsidian';
+import { App, TFile, TFolder, Vault, normalizePath } from 'obsidian';
 import { ArchiveConfig, ArchiveMode, ArchiveOperation } from './settings';
 
 export class Archiver {
+	private app: App;
 	private vault: Vault;
 
-	constructor(vault: Vault) {
-		this.vault = vault;
+	constructor(app: App) {
+		this.app = app;
+		this.vault = app.vault;
 	}
 
 	/**
@@ -63,7 +65,7 @@ export class Archiver {
 			// Folder conflict: merge contents instead of renaming
 			await this.mergeFolderContents(file, existingItem);
 			// Remove the original folder after moving its contents
-			await this.vault.delete(file);
+			await this.app.fileManager.trashFile(file);
 		} else {
 			// Ensure the destination directory exists
 			await this.ensureDirectoryExists(destinationPath);
@@ -115,7 +117,7 @@ export class Archiver {
 				if (child instanceof TFolder && existingChild instanceof TFolder) {
 					// Recursive merge for nested folders
 					await this.mergeFolderContents(child, existingChild);
-					await this.vault.delete(child);
+					await this.app.fileManager.trashFile(child);
 				} else if (existingChild) {
 					// Handle file conflicts - could add user choice here in the future
 					// For now, we'll create a unique name
