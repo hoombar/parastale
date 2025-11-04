@@ -16,7 +16,7 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'PARA Archive Settings' });
+		new Setting(containerEl).setName('PARA archive settings').setHeading();
 
 		// Global settings
 		new Setting(containerEl)
@@ -65,7 +65,7 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 				}));
 
 		// Archive configurations
-		containerEl.createEl('h3', { text: 'Archive Configurations' });
+		new Setting(containerEl).setName('Archive configurations').setHeading();
 		containerEl.createEl('p', { text: 'Configure different archive setups for different parts of your vault (e.g., Personal, Work)' });
 
 		// Add new config button

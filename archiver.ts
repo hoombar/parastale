@@ -137,7 +137,7 @@ export class Archiver {
 	/**
 	 * Generates a unique path by adding numbers if needed
 	 */
-	private async generateUniquePath(basePath: string): Promise<string> {
+	private generateUniquePath(basePath: string): string {
 		let counter = 1;
 		let newPath = basePath;
 

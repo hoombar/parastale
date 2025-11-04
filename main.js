@@ -83,7 +83,7 @@ var PARAArchiveSettingTab = class extends import_obsidian2.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "PARA Archive Settings" });
+    new import_obsidian2.Setting(containerEl).setName("PARA archive settings").setHeading();
     new import_obsidian2.Setting(containerEl).setName("Show confirmation dialog").setDesc("Show a confirmation dialog before archiving files").addToggle((toggle) => toggle.setValue(this.plugin.settings.showConfirmation).onChange(async (value) => {
       this.plugin.settings.showConfirmation = value;
       await this.plugin.saveSettings();
@@ -100,7 +100,7 @@ var PARAArchiveSettingTab = class extends import_obsidian2.PluginSettingTab {
       this.plugin.settings.undoTimeoutMs = value * 1e3;
       await this.plugin.saveSettings();
     }));
-    containerEl.createEl("h3", { text: "Archive Configurations" });
+    new import_obsidian2.Setting(containerEl).setName("Archive configurations").setHeading();
     containerEl.createEl("p", { text: "Configure different archive setups for different parts of your vault (e.g., Personal, Work)" });
     new import_obsidian2.Setting(containerEl).setName("Add new archive configuration").addButton((button) => button.setButtonText("Add").setCta().onClick(() => {
       this.addNewArchiveConfig();
@@ -229,7 +229,7 @@ var Archiver = class {
     }
     const existingFile = this.vault.getAbstractFileByPath(operation.originalPath);
     if (existingFile) {
-      const uniquePath = await this.generateUniquePath(operation.originalPath);
+      const uniquePath = this.generateUniquePath(operation.originalPath);
       await this.vault.rename(archivedFile, uniquePath);
       throw new Error(`Original location is occupied. File restored to: ${uniquePath}`);
     }
@@ -248,7 +248,7 @@ var Archiver = class {
           await this.mergeFolderContents(child, existingChild);
           await this.app.fileManager.trashFile(child);
         } else if (existingChild) {
-          const uniquePath = await this.generateUniquePath(childDestinationPath);
+          const uniquePath = this.generateUniquePath(childDestinationPath);
           await this.vault.rename(child, uniquePath);
         } else {
           await this.vault.rename(child, childDestinationPath);
@@ -262,7 +262,7 @@ var Archiver = class {
   /**
    * Generates a unique path by adding numbers if needed
    */
-  async generateUniquePath(basePath) {
+  generateUniquePath(basePath) {
     let counter = 1;
     let newPath = basePath;
     while (this.vault.getAbstractFileByPath(newPath)) {
@@ -797,7 +797,7 @@ var PARAArchivePlugin = class extends import_obsidian6.Plugin {
       timestamp: Date.now(),
       config
     };
-    const operationId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const operationId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     this.pendingOperations.set(operationId, operation);
     const undoNotice = new UndoNotice(
       message,
