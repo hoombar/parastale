@@ -62,7 +62,6 @@ export class LinkUpdater {
 	 */
 	async prepareFolderLinkUpdates(oldFolderPath: string, newFolderPath: string): Promise<LinkUpdate[]> {
 		const updates: LinkUpdate[] = [];
-		const allFiles = this.vault.getMarkdownFiles();
 
 		// Get all files that were in the folder
 		const filesInFolder = this.vault.getMarkdownFiles().filter(file =>

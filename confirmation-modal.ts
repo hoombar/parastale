@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TFile, TFolder } from 'obsidian';
+import { App, Modal, TFile, TFolder } from 'obsidian';
 import { ArchiveConfig } from './settings';
 import { LinkUpdate } from './link-updater';
 

@@ -1,5 +1,5 @@
 import { App, TFile, TFolder, Vault, normalizePath } from 'obsidian';
-import { ArchiveConfig, ArchiveMode, ArchiveOperation } from './settings';
+import { ArchiveConfig, ArchiveOperation } from './settings';
 
 export class Archiver {
 	private app: App;

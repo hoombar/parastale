@@ -1,4 +1,4 @@
-import { App, Plugin, TFile, TFolder, Notice, Menu } from 'obsidian';
+import { Plugin, TFile, TFolder, Notice, Menu } from 'obsidian';
 import { PARAArchiveSettings, DEFAULT_SETTINGS, ArchiveOperation, ArchiveConfig } from './settings';
 import { PARAArchiveSettingTab } from './settings-tab';
 import { Archiver } from './archiver';
@@ -195,7 +195,7 @@ export default class PARAArchivePlugin extends Plugin {
 		this.pendingOperations.set(operationId, operation);
 
 		// Create undo notice
-		const undoNotice = new UndoNotice(
+		new UndoNotice(
 			message,
 			() => {
 				void this.performUndo(operationId);

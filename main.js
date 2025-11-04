@@ -371,7 +371,6 @@ var LinkUpdater = class {
    */
   async prepareFolderLinkUpdates(oldFolderPath, newFolderPath) {
     const updates = [];
-    const allFiles = this.vault.getMarkdownFiles();
     const filesInFolder = this.vault.getMarkdownFiles().filter(
       (file) => file.path.startsWith(oldFolderPath + "/") || file.path === oldFolderPath
     );
@@ -801,7 +800,7 @@ var PARAArchivePlugin = class extends import_obsidian6.Plugin {
     };
     const operationId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     this.pendingOperations.set(operationId, operation);
-    const undoNotice = new UndoNotice(
+    new UndoNotice(
       message,
       () => {
         void this.performUndo(operationId);
