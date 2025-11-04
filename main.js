@@ -26,7 +26,7 @@ __export(main_exports, {
   default: () => PARAArchivePlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // settings.ts
 var DEFAULT_SETTINGS = {
@@ -40,7 +40,9 @@ var DEFAULT_SETTINGS = {
     }
   ],
   showConfirmation: true,
-  linkUpdateMode: "always"
+  linkUpdateMode: "always",
+  showUndoNotice: true,
+  undoTimeoutMs: 5e3
 };
 
 // settings-tab.ts
@@ -88,6 +90,14 @@ var PARAArchiveSettingTab = class extends import_obsidian2.PluginSettingTab {
     }));
     new import_obsidian2.Setting(containerEl).setName("Link update mode").setDesc("How to handle internal links when archiving files").addDropdown((dropdown) => dropdown.addOption("always", "Always update links").addOption("ask", "Ask before updating").addOption("never", "Never update links").setValue(this.plugin.settings.linkUpdateMode).onChange(async (value) => {
       this.plugin.settings.linkUpdateMode = value;
+      await this.plugin.saveSettings();
+    }));
+    new import_obsidian2.Setting(containerEl).setName("Show undo notification").setDesc("Show a temporary notification with an undo button after archiving files").addToggle((toggle) => toggle.setValue(this.plugin.settings.showUndoNotice).onChange(async (value) => {
+      this.plugin.settings.showUndoNotice = value;
+      await this.plugin.saveSettings();
+    }));
+    new import_obsidian2.Setting(containerEl).setName("Undo timeout (seconds)").setDesc("How long the undo notification stays visible").addSlider((slider) => slider.setLimits(1, 15, 1).setValue(this.plugin.settings.undoTimeoutMs / 1e3).setDynamicTooltip().onChange(async (value) => {
+      this.plugin.settings.undoTimeoutMs = value * 1e3;
       await this.plugin.saveSettings();
     }));
     containerEl.createEl("h3", { text: "Archive Configurations" });
@@ -155,8 +165,9 @@ var PARAArchiveSettingTab = class extends import_obsidian2.PluginSettingTab {
 // archiver.ts
 var import_obsidian3 = require("obsidian");
 var Archiver = class {
-  constructor(vault) {
-    this.vault = vault;
+  constructor(app) {
+    this.app = app;
+    this.vault = app.vault;
   }
   /**
    * Determines which archive configuration applies to a given file path
@@ -201,12 +212,29 @@ var Archiver = class {
     const existingItem = this.vault.getAbstractFileByPath(destinationPath);
     if (file instanceof import_obsidian3.TFolder && existingItem instanceof import_obsidian3.TFolder) {
       await this.mergeFolderContents(file, existingItem);
-      await this.vault.delete(file);
+      await this.app.fileManager.trashFile(file);
     } else {
       await this.ensureDirectoryExists(destinationPath);
       await this.vault.rename(file, destinationPath);
     }
     return destinationPath;
+  }
+  /**
+   * Undoes an archive operation by moving the file/folder back to its original location
+   */
+  async undoArchive(operation) {
+    const archivedFile = this.vault.getAbstractFileByPath(operation.destinationPath);
+    if (!archivedFile) {
+      throw new Error("Archived file no longer exists and cannot be restored");
+    }
+    const existingFile = this.vault.getAbstractFileByPath(operation.originalPath);
+    if (existingFile) {
+      const uniquePath = await this.generateUniquePath(operation.originalPath);
+      await this.vault.rename(archivedFile, uniquePath);
+      throw new Error(`Original location is occupied. File restored to: ${uniquePath}`);
+    }
+    await this.ensureDirectoryExists(operation.originalPath);
+    await this.vault.rename(archivedFile, operation.originalPath);
   }
   /**
    * Merges contents of source folder into destination folder
@@ -218,7 +246,7 @@ var Archiver = class {
         const existingChild = this.vault.getAbstractFileByPath(childDestinationPath);
         if (child instanceof import_obsidian3.TFolder && existingChild instanceof import_obsidian3.TFolder) {
           await this.mergeFolderContents(child, existingChild);
-          await this.vault.delete(child);
+          await this.app.fileManager.trashFile(child);
         } else if (existingChild) {
           const uniquePath = await this.generateUniquePath(childDestinationPath);
           await this.vault.rename(child, uniquePath);
@@ -592,11 +620,63 @@ var ArchiveConfirmationModal = class extends import_obsidian4.Modal {
   }
 };
 
+// undo-notice.ts
+var import_obsidian5 = require("obsidian");
+var UndoNotice = class extends import_obsidian5.Notice {
+  constructor(message, undoCallback, timeoutMs = 5e3) {
+    super("", timeoutMs);
+    this.undoCallback = undoCallback;
+    this.messageEl.empty();
+    this.createNoticeContent(message);
+    this.timeoutId = window.setTimeout(() => {
+      this.hide();
+    }, timeoutMs);
+  }
+  createNoticeContent(message) {
+    const container = this.messageEl.createDiv("undo-notice-container");
+    const messageEl = container.createSpan("undo-notice-message");
+    messageEl.textContent = message;
+    this.undoButton = container.createEl("button", {
+      text: "Undo",
+      cls: "undo-notice-button"
+    });
+    this.undoButton.addEventListener("click", this.handleUndo.bind(this));
+  }
+  handleUndo() {
+    if (this.timeoutId) {
+      window.clearTimeout(this.timeoutId);
+    }
+    this.undoCallback();
+    this.showUndoInProgress();
+    setTimeout(() => {
+      this.hide();
+    }, 1500);
+  }
+  showUndoInProgress() {
+    this.messageEl.empty();
+    const container = this.messageEl.createDiv("undo-notice-container");
+    const messageEl = container.createSpan("undo-notice-message");
+    messageEl.textContent = "Undoing archive operation...";
+    const spinner = container.createSpan("undo-notice-spinner");
+    spinner.textContent = "\u23F3";
+  }
+  hide() {
+    if (this.timeoutId) {
+      window.clearTimeout(this.timeoutId);
+    }
+    super.hide();
+  }
+};
+
 // main.ts
-var PARAArchivePlugin = class extends import_obsidian5.Plugin {
+var PARAArchivePlugin = class extends import_obsidian6.Plugin {
+  constructor() {
+    super(...arguments);
+    this.pendingOperations = /* @__PURE__ */ new Map();
+  }
   async onload() {
     await this.loadSettings();
-    this.archiver = new Archiver(this.app.vault);
+    this.archiver = new Archiver(this.app);
     this.linkUpdater = new LinkUpdater(this.app);
     this.addSettingTab(new PARAArchiveSettingTab(this.app, this));
     this.registerEvent(
@@ -645,19 +725,19 @@ var PARAArchivePlugin = class extends import_obsidian5.Plugin {
     try {
       const config = this.archiver.findArchiveConfig(file.path, this.settings.archiveConfigs);
       if (!config) {
-        new import_obsidian5.Notice("No archive configuration found for this file location");
+        new import_obsidian6.Notice("No archive configuration found for this file location");
         return;
       }
       if (this.archiver.isFileInArchive(file.path, this.settings.archiveConfigs)) {
-        new import_obsidian5.Notice("File is already in an archive folder");
+        new import_obsidian6.Notice("File is already in an archive folder");
         return;
       }
       const destinationPath = this.archiver.generateArchivePath(file.path, config);
       let linkUpdates = [];
       if (this.settings.linkUpdateMode !== "never") {
-        if (file instanceof import_obsidian5.TFile) {
+        if (file instanceof import_obsidian6.TFile) {
           linkUpdates = await this.linkUpdater.prepareLinkUpdates(file.path, destinationPath);
-        } else if (file instanceof import_obsidian5.TFolder) {
+        } else if (file instanceof import_obsidian6.TFolder) {
           linkUpdates = await this.linkUpdater.prepareFolderLinkUpdates(file.path, destinationPath);
         }
       }
@@ -679,27 +759,78 @@ var PARAArchivePlugin = class extends import_obsidian5.Plugin {
       }
     } catch (error) {
       console.error("Archive operation failed:", error);
-      new import_obsidian5.Notice(`Archive failed: ${error.message}`);
+      new import_obsidian6.Notice(`Archive failed: ${error.message}`);
     }
   }
   async performArchive(file, config, destinationPath, linkUpdates) {
     try {
+      const originalPath = file.path;
       await this.archiver.archiveFile(file, config);
+      let appliedLinkUpdates = [];
+      let successMessage = "File archived successfully";
       if (this.settings.linkUpdateMode === "always" && linkUpdates.length > 0) {
         const result = await this.linkUpdater.applyLinkUpdates(linkUpdates);
+        appliedLinkUpdates = linkUpdates;
         if (result.failed.length > 0) {
-          new import_obsidian5.Notice(`File archived. Updated ${result.success} files, failed to update ${result.failed.length} files.`);
+          successMessage = `File archived. Updated ${result.success} files, failed to update ${result.failed.length} files.`;
         } else {
-          new import_obsidian5.Notice(`File archived successfully. Updated ${result.success} files with links.`);
+          successMessage = `File archived successfully. Updated ${result.success} files with links.`;
         }
       } else if (this.settings.linkUpdateMode === "ask" && linkUpdates.length > 0) {
-        new import_obsidian5.Notice(`File archived. ${linkUpdates.length} files contain links to this file. Use the command palette to update links if needed.`);
+        successMessage = `File archived. ${linkUpdates.length} files contain links to this file.`;
+      }
+      if (this.settings.showUndoNotice) {
+        this.showUndoNotice(originalPath, destinationPath, appliedLinkUpdates, config, successMessage);
       } else {
-        new import_obsidian5.Notice("File archived successfully");
+        new import_obsidian6.Notice(successMessage);
       }
     } catch (error) {
       console.error("Archive operation failed:", error);
-      new import_obsidian5.Notice(`Archive failed: ${error.message}`);
+      new import_obsidian6.Notice(`Archive failed: ${error.message}`);
+    }
+  }
+  showUndoNotice(originalPath, destinationPath, linkUpdates, config, message) {
+    const operation = {
+      originalPath,
+      destinationPath,
+      linkUpdates,
+      timestamp: Date.now(),
+      config
+    };
+    const operationId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.pendingOperations.set(operationId, operation);
+    const undoNotice = new UndoNotice(
+      message,
+      async () => {
+        await this.performUndo(operationId);
+      },
+      this.settings.undoTimeoutMs
+    );
+    setTimeout(() => {
+      this.pendingOperations.delete(operationId);
+    }, this.settings.undoTimeoutMs + 1e3);
+  }
+  async performUndo(operationId) {
+    const operation = this.pendingOperations.get(operationId);
+    if (!operation) {
+      new import_obsidian6.Notice("Undo operation has expired");
+      return;
+    }
+    try {
+      await this.archiver.undoArchive(operation);
+      if (operation.linkUpdates.length > 0) {
+        const reverseLinkUpdates = operation.linkUpdates.map((update) => ({
+          ...update,
+          oldContent: update.newContent,
+          newContent: update.oldContent
+        }));
+        await this.linkUpdater.applyLinkUpdates(reverseLinkUpdates);
+      }
+      this.pendingOperations.delete(operationId);
+      new import_obsidian6.Notice("Archive operation undone successfully");
+    } catch (error) {
+      console.error("Undo failed:", error);
+      new import_obsidian6.Notice(`Undo failed: ${error.message}`);
     }
   }
 };

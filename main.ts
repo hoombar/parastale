@@ -1,5 +1,5 @@
 import { App, Plugin, TFile, TFolder, Notice, Menu } from 'obsidian';
-import { PARAArchiveSettings, DEFAULT_SETTINGS, ArchiveOperation } from './settings';
+import { PARAArchiveSettings, DEFAULT_SETTINGS, ArchiveOperation, ArchiveConfig } from './settings';
 import { PARAArchiveSettingTab } from './settings-tab';
 import { Archiver } from './archiver';
 import { LinkUpdater, LinkUpdate } from './link-updater';
@@ -134,7 +134,7 @@ export default class PARAArchivePlugin extends Plugin {
 
 	private async performArchive(
 		file: TFile | TFolder,
-		config: any,
+		config: ArchiveConfig,
 		destinationPath: string,
 		linkUpdates: LinkUpdate[]
 	) {
@@ -178,7 +178,7 @@ export default class PARAArchivePlugin extends Plugin {
 		originalPath: string,
 		destinationPath: string,
 		linkUpdates: LinkUpdate[],
-		config: any,
+		config: ArchiveConfig,
 		message: string
 	) {
 		// Create operation record
@@ -191,7 +191,7 @@ export default class PARAArchivePlugin extends Plugin {
 		};
 
 		// Generate unique ID for this operation
-		const operationId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		const operationId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 		this.pendingOperations.set(operationId, operation);
 
 		// Create undo notice

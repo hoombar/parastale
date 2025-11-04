@@ -90,7 +90,7 @@ export class Archiver {
 		const existingFile = this.vault.getAbstractFileByPath(operation.originalPath);
 		if (existingFile) {
 			// Generate a unique name for the restore
-			const uniquePath = await this.generateUniquePath(operation.originalPath);
+			const uniquePath = this.generateUniquePath(operation.originalPath);
 			await this.vault.rename(archivedFile, uniquePath);
 			throw new Error(`Original location is occupied. File restored to: ${uniquePath}`);
 		}
@@ -121,7 +121,7 @@ export class Archiver {
 				} else if (existingChild) {
 					// Handle file conflicts - could add user choice here in the future
 					// For now, we'll create a unique name
-					const uniquePath = await this.generateUniquePath(childDestinationPath);
+					const uniquePath = this.generateUniquePath(childDestinationPath);
 					await this.vault.rename(child, uniquePath);
 				} else {
 					// No conflict, move normally
