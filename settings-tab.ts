@@ -24,9 +24,9 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 			.setDesc('Show a confirmation dialog before archiving files')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showConfirmation)
-				.onChange(async (value) => {
+				.onChange((value) => {
 					this.plugin.settings.showConfirmation = value;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				}));
 
 		new Setting(containerEl)
@@ -37,9 +37,9 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 				.addOption('ask', 'Ask before updating')
 				.addOption('never', 'Never update links')
 				.setValue(this.plugin.settings.linkUpdateMode)
-				.onChange(async (value: LinkUpdateMode) => {
+				.onChange((value: LinkUpdateMode) => {
 					this.plugin.settings.linkUpdateMode = value;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				}));
 
 		new Setting(containerEl)
@@ -47,9 +47,9 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 			.setDesc('Show a temporary notification with an undo button after archiving files')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showUndoNotice)
-				.onChange(async (value) => {
+				.onChange((value) => {
 					this.plugin.settings.showUndoNotice = value;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				}));
 
 		new Setting(containerEl)
@@ -59,9 +59,9 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 				.setLimits(1, 15, 1)
 				.setValue(this.plugin.settings.undoTimeoutMs / 1000)
 				.setDynamicTooltip()
-				.onChange(async (value) => {
+				.onChange((value) => {
 					this.plugin.settings.undoTimeoutMs = value * 1000;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				}));
 
 		// Archive configurations
@@ -107,9 +107,9 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 			.setDesc('A friendly name for this archive configuration')
 			.addText(text => text
 				.setValue(config.name)
-				.onChange(async (value) => {
+				.onChange((value) => {
 					config.name = value;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 					// Update the header without refreshing the entire display
 					configDiv.querySelector('h4').textContent = `Configuration: ${config.name}`;
 				}));
@@ -120,13 +120,13 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 			.addSearch(search => {
 				search.setPlaceholder('Select or type folder path...')
 					.setValue(config.rootPath)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						config.rootPath = value;
-						await this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					});
-				new FolderSuggest(this.app, search.inputEl, async (value) => {
+				new FolderSuggest(this.app, search.inputEl, (value) => {
 					config.rootPath = value;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				});
 			});
 
@@ -136,13 +136,13 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 			.addSearch(search => {
 				search.setPlaceholder('Select or type archive folder path...')
 					.setValue(config.archivePath)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						config.archivePath = value;
-						await this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					});
-				new FolderSuggest(this.app, search.inputEl, async (value) => {
+				new FolderSuggest(this.app, search.inputEl, (value) => {
 					config.archivePath = value;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				});
 			});
 
@@ -153,9 +153,9 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 				.addOption('date-based', 'Date-based (YYYY-MM folders)')
 				.addOption('path-mirror', 'Mirror original path structure')
 				.setValue(config.archiveMode)
-				.onChange(async (value: ArchiveMode) => {
+				.onChange((value: ArchiveMode) => {
 					config.archiveMode = value;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				}));
 
 		new Setting(configDiv)
@@ -163,9 +163,9 @@ export class PARAArchiveSettingTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText('Remove')
 				.setWarning()
-				.onClick(async () => {
+				.onClick(() => {
 					this.plugin.settings.archiveConfigs.splice(index, 1);
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 					this.display();
 				}));
 

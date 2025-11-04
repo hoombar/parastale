@@ -197,8 +197,8 @@ export default class PARAArchivePlugin extends Plugin {
 		// Create undo notice
 		const undoNotice = new UndoNotice(
 			message,
-			async () => {
-				await this.performUndo(operationId);
+			() => {
+				void this.performUndo(operationId);
 			},
 			this.settings.undoTimeoutMs
 		);

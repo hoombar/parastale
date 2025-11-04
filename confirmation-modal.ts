@@ -119,18 +119,20 @@ export class ArchiveConfirmationModal extends Modal {
 			text: 'Archive',
 			cls: 'mod-cta'
 		});
-		confirmButton.addEventListener('click', async () => {
+		confirmButton.addEventListener('click', () => {
 			confirmButton.disabled = true;
 			confirmButton.textContent = 'Archiving...';
 
-			try {
-				await this.onConfirm();
-				this.close();
-			} catch (error) {
-				confirmButton.disabled = false;
-				confirmButton.textContent = 'Archive';
-				console.error('Archive operation failed:', error);
-			}
+			void (async () => {
+				try {
+					await this.onConfirm();
+					this.close();
+				} catch (error) {
+					confirmButton.disabled = false;
+					confirmButton.textContent = 'Archive';
+					console.error('Archive operation failed:', error);
+				}
+			})();
 		});
 	}
 

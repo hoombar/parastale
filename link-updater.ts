@@ -21,7 +21,7 @@ export class LinkUpdater {
 	/**
 	 * Finds all files that link to the given file
 	 */
-	async findLinksToFile(targetFile: TFile): Promise<TFile[]> {
+	findLinksToFile(targetFile: TFile): TFile[] {
 		const linkedFiles: TFile[] = [];
 		const allFiles = this.vault.getMarkdownFiles();
 

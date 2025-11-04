@@ -84,21 +84,21 @@ var PARAArchiveSettingTab = class extends import_obsidian2.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     new import_obsidian2.Setting(containerEl).setName("PARA archive settings").setHeading();
-    new import_obsidian2.Setting(containerEl).setName("Show confirmation dialog").setDesc("Show a confirmation dialog before archiving files").addToggle((toggle) => toggle.setValue(this.plugin.settings.showConfirmation).onChange(async (value) => {
+    new import_obsidian2.Setting(containerEl).setName("Show confirmation dialog").setDesc("Show a confirmation dialog before archiving files").addToggle((toggle) => toggle.setValue(this.plugin.settings.showConfirmation).onChange((value) => {
       this.plugin.settings.showConfirmation = value;
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
     }));
-    new import_obsidian2.Setting(containerEl).setName("Link update mode").setDesc("How to handle internal links when archiving files").addDropdown((dropdown) => dropdown.addOption("always", "Always update links").addOption("ask", "Ask before updating").addOption("never", "Never update links").setValue(this.plugin.settings.linkUpdateMode).onChange(async (value) => {
+    new import_obsidian2.Setting(containerEl).setName("Link update mode").setDesc("How to handle internal links when archiving files").addDropdown((dropdown) => dropdown.addOption("always", "Always update links").addOption("ask", "Ask before updating").addOption("never", "Never update links").setValue(this.plugin.settings.linkUpdateMode).onChange((value) => {
       this.plugin.settings.linkUpdateMode = value;
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
     }));
-    new import_obsidian2.Setting(containerEl).setName("Show undo notification").setDesc("Show a temporary notification with an undo button after archiving files").addToggle((toggle) => toggle.setValue(this.plugin.settings.showUndoNotice).onChange(async (value) => {
+    new import_obsidian2.Setting(containerEl).setName("Show undo notification").setDesc("Show a temporary notification with an undo button after archiving files").addToggle((toggle) => toggle.setValue(this.plugin.settings.showUndoNotice).onChange((value) => {
       this.plugin.settings.showUndoNotice = value;
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
     }));
-    new import_obsidian2.Setting(containerEl).setName("Undo timeout (seconds)").setDesc("How long the undo notification stays visible").addSlider((slider) => slider.setLimits(1, 15, 1).setValue(this.plugin.settings.undoTimeoutMs / 1e3).setDynamicTooltip().onChange(async (value) => {
+    new import_obsidian2.Setting(containerEl).setName("Undo timeout (seconds)").setDesc("How long the undo notification stays visible").addSlider((slider) => slider.setLimits(1, 15, 1).setValue(this.plugin.settings.undoTimeoutMs / 1e3).setDynamicTooltip().onChange((value) => {
       this.plugin.settings.undoTimeoutMs = value * 1e3;
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
     }));
     new import_obsidian2.Setting(containerEl).setName("Archive configurations").setHeading();
     containerEl.createEl("p", { text: "Configure different archive setups for different parts of your vault (e.g., Personal, Work)" });
@@ -124,38 +124,38 @@ var PARAArchiveSettingTab = class extends import_obsidian2.PluginSettingTab {
   displayArchiveConfig(containerEl, config, index) {
     const configDiv = containerEl.createDiv("archive-config");
     configDiv.createEl("h4", { text: `Configuration: ${config.name}` });
-    new import_obsidian2.Setting(configDiv).setName("Configuration name").setDesc("A friendly name for this archive configuration").addText((text) => text.setValue(config.name).onChange(async (value) => {
+    new import_obsidian2.Setting(configDiv).setName("Configuration name").setDesc("A friendly name for this archive configuration").addText((text) => text.setValue(config.name).onChange((value) => {
       config.name = value;
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
       configDiv.querySelector("h4").textContent = `Configuration: ${config.name}`;
     }));
     new import_obsidian2.Setting(configDiv).setName("Root path").setDesc('The root folder path this configuration applies to (e.g., "Personal", "Work"). Leave empty for vault root.').addSearch((search) => {
-      search.setPlaceholder("Select or type folder path...").setValue(config.rootPath).onChange(async (value) => {
+      search.setPlaceholder("Select or type folder path...").setValue(config.rootPath).onChange((value) => {
         config.rootPath = value;
-        await this.plugin.saveSettings();
+        void this.plugin.saveSettings();
       });
-      new FolderSuggest(this.app, search.inputEl, async (value) => {
+      new FolderSuggest(this.app, search.inputEl, (value) => {
         config.rootPath = value;
-        await this.plugin.saveSettings();
+        void this.plugin.saveSettings();
       });
     });
     new import_obsidian2.Setting(configDiv).setName("Archive path").setDesc("The folder where archived files will be moved (relative to root path)").addSearch((search) => {
-      search.setPlaceholder("Select or type archive folder path...").setValue(config.archivePath).onChange(async (value) => {
+      search.setPlaceholder("Select or type archive folder path...").setValue(config.archivePath).onChange((value) => {
         config.archivePath = value;
-        await this.plugin.saveSettings();
+        void this.plugin.saveSettings();
       });
-      new FolderSuggest(this.app, search.inputEl, async (value) => {
+      new FolderSuggest(this.app, search.inputEl, (value) => {
         config.archivePath = value;
-        await this.plugin.saveSettings();
+        void this.plugin.saveSettings();
       });
     });
-    new import_obsidian2.Setting(configDiv).setName("Archive mode").setDesc("How files should be organized in the archive folder").addDropdown((dropdown) => dropdown.addOption("date-based", "Date-based (YYYY-MM folders)").addOption("path-mirror", "Mirror original path structure").setValue(config.archiveMode).onChange(async (value) => {
+    new import_obsidian2.Setting(configDiv).setName("Archive mode").setDesc("How files should be organized in the archive folder").addDropdown((dropdown) => dropdown.addOption("date-based", "Date-based (YYYY-MM folders)").addOption("path-mirror", "Mirror original path structure").setValue(config.archiveMode).onChange((value) => {
       config.archiveMode = value;
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
     }));
-    new import_obsidian2.Setting(configDiv).setName("Remove configuration").addButton((button) => button.setButtonText("Remove").setWarning().onClick(async () => {
+    new import_obsidian2.Setting(configDiv).setName("Remove configuration").addButton((button) => button.setButtonText("Remove").setWarning().onClick(() => {
       this.plugin.settings.archiveConfigs.splice(index, 1);
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
       this.display();
     }));
     configDiv.createEl("hr");
@@ -336,7 +336,7 @@ var LinkUpdater = class {
   /**
    * Finds all files that link to the given file
    */
-  async findLinksToFile(targetFile) {
+  findLinksToFile(targetFile) {
     const linkedFiles = [];
     const allFiles = this.vault.getMarkdownFiles();
     for (const file of allFiles) {
@@ -601,17 +601,19 @@ var ArchiveConfirmationModal = class extends import_obsidian4.Modal {
       text: "Archive",
       cls: "mod-cta"
     });
-    confirmButton.addEventListener("click", async () => {
+    confirmButton.addEventListener("click", () => {
       confirmButton.disabled = true;
       confirmButton.textContent = "Archiving...";
-      try {
-        await this.onConfirm();
-        this.close();
-      } catch (error) {
-        confirmButton.disabled = false;
-        confirmButton.textContent = "Archive";
-        console.error("Archive operation failed:", error);
-      }
+      void (async () => {
+        try {
+          await this.onConfirm();
+          this.close();
+        } catch (error) {
+          confirmButton.disabled = false;
+          confirmButton.textContent = "Archive";
+          console.error("Archive operation failed:", error);
+        }
+      })();
     });
   }
   onClose() {
@@ -801,8 +803,8 @@ var PARAArchivePlugin = class extends import_obsidian6.Plugin {
     this.pendingOperations.set(operationId, operation);
     const undoNotice = new UndoNotice(
       message,
-      async () => {
-        await this.performUndo(operationId);
+      () => {
+        void this.performUndo(operationId);
       },
       this.settings.undoTimeoutMs
     );
