@@ -1,6 +1,6 @@
 {
   "name": "para-archive",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Obsidian plugin for archiving files using the PARA method",
   "main": "main.js",
   "scripts": {

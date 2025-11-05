@@ -1,7 +1,7 @@
 {
 	"id": "para-archive",
 	"name": "PARA Archive",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "0.15.0",
 	"description": "Archive files and folders using the PARA method with configurable archive strategies",
 	"author": "Ben Pearson",
